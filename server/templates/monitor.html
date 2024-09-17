@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="2" />
+    <title>图书馆分布式系统演示-管理员</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #0d3262;
+        }
+        header {
+            background-color: #0d3262;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        main {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            color: #0d3262;
+            border-bottom: 2px solid #0d3262;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h2 a {
+            font-size: 0.8em;
+            color: #0d3262;
+            text-decoration: none;
+            border-bottom: 1px solid #0d3262;
+            padding-bottom: 2px;
+        }
+        h2 a:hover {
+            color: #1a3b6e;
+            border-bottom-color: #1a3b6e;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #0d3262;
+            color: white;
+        }
+        a {
+            color: #0d3262;
+            text-decoration: none;
+            border-bottom: 1px solid #0d3262;
+            padding-bottom: 2px;
+        }
+        a:hover {
+            color: #1a3b6e;
+            border-bottom-color: #1a3b6e;
+        }
+        .normal {
+            color: black;
+        }
+        .good {
+            color: green;
+        }
+        .ignore {
+            color: gray;
+        }
+        .attention {
+            color: darkorange;
+        }
+        .warning {
+            color: red;
+        }
+        .log-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .log-container table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .log-container thead {
+            position: sticky;
+            top: 0;
+            background-color: #0d3262;
+            color: white;
+            z-index: 1;
+        }
+</style
+    </style>
+    <script>
+        function reserveSeat(seatId, reserve) {
+            fetch(`/reserveAPI?seat_id=${seatId}&reserve=${reserve}`)
+                .then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert(`API调用失败，请重试。状态码: ${response.status} - ${response.statusText}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(`操作失败，请重试。错误信息: ${error.message}`);
+                });
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>图书馆分布式系统演示</h1>
+    </header>
+    <main>
+        <h2>管理员控制台
+            <a href="/index">Index</a>
+        </h2>
+        <h3>座位情况</h3>
+        <table>
+            <tr>
+                <th>座位ID</th>
+                <th>预约状态</th>
+                <th>使用状况</th>
+                <th>时长</th>
+                <th>操作</th>
+            </tr>
+            {% for one in seat_conditions %}
+            <tr>
+                <!-- seat id -->
+                <td>{{one[0]}}</td>
+
+                <!-- reservation status -->
+                <td class="{% if one[1] == 0 %}good{% else %}normal{% endif %}">
+                    {% if one[1] == 0 %} Free {% else %} Reserved {% endif %}
+                </td>
+
+                <!-- seat condition -->
+                <td class="
+                {% if one[2] == '临时使用中'%} attention
+                {% elif one[2] == '预约使用中' %} good
+                {% elif one[2] == '预约未使用' %} normal
+                {% else%} ignore
+                {% endif %}">
+                    {{one[2]}}
+                </td>
+                
+                <!-- time duration -->
+                <td class="
+                {% if one[3] == '无数据'%} ignore
+                {% elif one[4] == '正常'%} normal
+                {% else%} warning
+                {% endif %}">
+                    {{one[3]}}
+                </td>
+
+                <!-- operation -->
+                <td>
+                    {% if one[1] == 0 %}
+                    <a href="javascript:void(0);" onclick="reserveSeat('{{one[0]}}', 1)">Reserve</a>
+                    {% else %}
+                    <a href="javascript:void(0);" onclick="reserveSeat('{{one[0]}}', 0)">Cancel</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <h3>季节&时间</h3>
+        <img src="{{ url_for('static',filename='view/'+ view_cover) }}" alt="描述" style="width: 50%; height: 100px;">
+        
+        <h3>日志</h3>
+        <div class="log-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>座位ID</th>
+                        <th>预约状态</th>
+                        <th>传感器信息</th>
+                        <th>座位情况</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for one in seat_logs[::-1] %}
+                    <tr>
+                        <td>{{ one[0] }}</td>
+                        <td>{{ one[1] }}</td>
+                        <td>{{ one[3] }}</td>
+                        <td>{{ one[2] }}</td>
+                        <td class="
+                        {% if one[4] == '临时使用中'%} attention
+                        {% elif one[4] == '预约使用中' %} good
+                        {% elif one[4] == '预约未使用' %} normal
+                        {% else%} ignore
+                        {% endif %}">
+                            {{ one[4] }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+</body>
+</html>
